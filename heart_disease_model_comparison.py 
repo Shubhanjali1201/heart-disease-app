@@ -1,0 +1,55 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, roc_auc_score, classification_report, confusion_matrix
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load data
+df = pd.read_csv("heart.csv")
+
+# Data preprocessing
+X = df.drop("target", axis=1)
+y = df["target"]
+
+# Scaling
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Train-Test Split
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+# Models
+models = {
+    "KNN": KNeighborsClassifier(n_neighbors=5),
+    "Random Forest": RandomForestClassifier(n_estimators=100, random_state=42),
+    "XGBoost": XGBClassifier(use_label_encoder=False, eval_metric='logloss', random_state=42)
+}
+
+# Evaluation
+results = {}
+for name, model in models.items():
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    acc = accuracy_score(y_test, y_pred)
+    roc = roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
+    results[name] = {"Accuracy": acc, "ROC AUC": roc}
+    print(f"\n{name}:\n")
+    print("Accuracy:", acc)
+    print("ROC AUC:", roc)
+    print(classification_report(y_test, y_pred))
+    cm = confusion_matrix(y_test, y_pred)
+    sns.heatmap(cm, annot=True, fmt='d')
+    plt.title(f"Confusion Matrix: {name}")
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
+    plt.show()
+
+# Summary
+print("\nModel Comparison:")
+for name, metrics in results.items():
+    print(f"{name}: Accuracy={metrics['Accuracy']:.4f}, ROC AUC={metrics['ROC AUC']:.4f}")
